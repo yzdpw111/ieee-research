@@ -11,7 +11,7 @@ IEEE Xplore 学术检索：搜索、详情（参考文献/关键词/引用格式
 
 ## 快速开始（首次使用）
 
-前置：**Windows** · **Google Chrome** · **Python 3.9+** · 能访问 `ieeexplore.ieee.org` · （下载类命令还需要**机构订阅**）
+前置：**Windows** / **Google Chrome** / **Python 3.9+** / 能访问 `ieeexplore.ieee.org` / （下载类命令还需要**机构订阅**）
 
 ```powershell
 # 1) 装依赖（requirements.txt 在 scripts/ 下）
@@ -24,7 +24,7 @@ python scripts/ieee_search.py --q "deep learning" --rows 5 --parallel 1
 python scripts/chrome_session.py --start
 #    → 用机构 IP 或 CARSI 登录，打开任意 IEEE 页面，顶部出现
 #      "Access provided by: <你的机构名>" 即已激活
-python scripts/chrome_session.py --status     # 应看到: ✅ CDP 在线: ... (port 9222)
+python scripts/chrome_session.py --status     # 应看到: CDP 在线: ... (port 9222)
 
 # 4) 下载（--save-dir 必填）
 python scripts/ieee_paper_download.py --arnumber 8876906 --save-dir ".\out\papers"
@@ -58,12 +58,12 @@ python scripts/chrome_session.py --stop
 
 | 参数 | 必填 | 默认 | 说明 |
 |------|:--:|------|------|
-| `--q` | ✅ | — | 搜索关键词（可重复，1-8 个） |
-| `--type` | ❌ | 全部 | 内容类型（可重复）：`Conferences` / `Journals` / `Magazines` |
-| `--year` | ❌ | — | 年份 `YYYY` 或 `YYYY-YYYY`（≥1943） |
-| `--rows` | ❌ | 25 | 每关键词最大结果数（≤25） |
-| `--page` | ❌ | 1 | 页码 |
-| `--parallel` | ❌ | 2 | 并行关键词数（1-8） |
+| `--q` | 必填 | — | 搜索关键词（可重复，1-8 个） |
+| `--type` | 可选 | 全部 | 内容类型（可重复）：`Conferences` / `Journals` / `Magazines` |
+| `--year` | 可选 | — | 年份 `YYYY` 或 `YYYY-YYYY`（≥1943） |
+| `--rows` | 可选 | 25 | 每关键词最大结果数（≤25） |
+| `--page` | 可选 | 1 | 页码 |
+| `--parallel` | 可选 | 2 | 并行关键词数（1-8） |
 
 **输出：** `{ count, results, logPath }`，每条 result 含 `keyword, totalResults, pageInfo, perPage, items[{ id, arnumber, title, url, snippet }]`。
 
@@ -73,8 +73,8 @@ python scripts/chrome_session.py --stop
 
 | 参数 | 必填 | 默认 | 说明 |
 |------|:--:|------|------|
-| `--arnumber` | ✅ | — | 文章编号（可重复，1-8 个） |
-| `--parallel` | ❌ | 2 | 并行任务数（1-8） |
+| `--arnumber` | 必填 | — | 文章编号（可重复，1-8 个） |
+| `--parallel` | 可选 | 2 | 并行任务数（1-8） |
 
 **输出：** `{ count, results, logPath }`，每条 result 含 `arnumber, hasInstitutionalAccess, title, authors[], abstract, publishedIn, pubDate, doi, citedBy, fullTextViews, references[], keywords, footnotes[], citations{ plain, bibtex, ris }`。
 
@@ -84,8 +84,8 @@ python scripts/chrome_session.py --stop
 
 | 参数 | 必填 | 默认 | 说明 |
 |------|:--:|------|------|
-| `--arnumber` | ✅ | — | 文章编号（可重复，1-5 个，顺序执行） |
-| `--save-dir` | ✅ | — | 保存目录（不存在会自动创建） |
+| `--arnumber` | 必填 | — | 文章编号（可重复，1-5 个，顺序执行） |
+| `--save-dir` | 必填 | — | 保存目录（不存在会自动创建） |
 
 **输出：** `{ count, results, logPath }`，每条含 `download: { name, path, size }`（文件名为清洗后的论文标题）。
 
@@ -96,8 +96,8 @@ python scripts/chrome_session.py --stop
 
 | 参数 | 必填 | 默认 | 说明 |
 |------|:--:|------|------|
-| `--arnumber` | ✅ | — | 文章编号（可重复，1-5 个，顺序执行） |
-| `--save-dir` | ✅ | — | 保存目录（图片存入 `<save-dir>/<arnumber>/`） |
+| `--arnumber` | 必填 | — | 文章编号（可重复，1-5 个，顺序执行） |
+| `--save-dir` | 必填 | — | 保存目录（图片存入 `<save-dir>/<arnumber>/`） |
 
 **输出：** `{ count, results, logPath }`，每条含 `count, dir`；无图 → `"No figures"`。
 
