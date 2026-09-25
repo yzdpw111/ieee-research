@@ -99,7 +99,7 @@ python scripts/chrome_session.py --stop
 | `--arnumber` | 必填 | — | 文章编号（可重复，1-5 个，顺序执行） |
 | `--save-dir` | 必填 | — | 保存目录（图片存入 `<save-dir>/<arnumber>/`） |
 
-**输出：** `{ count, results, logPath }`，每条含 `count, dir`；无图 → `"No figures"`。
+**输出：** `{ count, results, logPath }`，每条含 `count`（成功张数）、`total`（页面收集到的张数）、`dir`；单张图下载失败时另含 `failures[{ name, url, error }]`——**`count < total` 即表示有缺口**。无图 → `"No figures"`。
 
 **用法：**
 

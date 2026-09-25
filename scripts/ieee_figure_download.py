@@ -88,6 +88,7 @@ def download_figures(client, arn, save_dir):
     out_dir = os.path.join(save_dir, arn)
     os.makedirs(out_dir, exist_ok=True)
     n = 0
+    failures = []
     for i, u in enumerate(urls, 1):
         name = figure_name(u) or f"fig_{i}"
         ext_m = re.search(r"\.(\w+)(?:\?|$)", u)
@@ -98,8 +99,12 @@ def download_figures(client, arn, save_dir):
                 f.write(data)
             n += 1
         except Exception as e:
+            failures.append({"name": name, "url": u, "error": str(e)[:200]})
             sys.stderr.write(f"[ieee-figure-download] {arn} 图 {i} 失败: {str(e)[:80]}\n")
-    return {"arnumber": arn, "count": n, "dir": out_dir}
+    out = {"arnumber": arn, "count": n, "total": len(urls), "dir": out_dir}
+    if failures:
+        out["failures"] = failures
+    return out
 
 
 def main():
