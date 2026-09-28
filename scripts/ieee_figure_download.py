@@ -15,6 +15,7 @@ import time
 from cdp_base import (CdpError, close_page, create_page, ensure_cdp,  # noqa: E402
                       fetch_binary, setup_stdout, write_log)
 from config import get
+from ieee_parser import sanitize_filename
 
 MAX_DOWNLOAD = 5
 FIGURES_TAB_JS = """() => {
@@ -28,12 +29,17 @@ COLLECT_IMAGES_JS = """() => Array.from(
   document.querySelectorAll('img[src*="mediastore/IEEE"], .document-tab-content img'))
   .map(i => i.src || '')
   .filter(s => s.includes('/mediastore/'))"""
+# 论文标题（h1）。结果里带上它，调用方才知道 <arnumber>/ 目录是哪篇论文。
+H1_TEXT_JS = "(document.querySelector('h1') || {}).textContent || ''"
 
 
 def parse_args(argv=None):
     ap = argparse.ArgumentParser(description="IEEE Xplore 图片下载")
     ap.add_argument("--arnumber", action="append", required=True, help="文章编号（可重复，1-5 个）")
     ap.add_argument("--save-dir", required=True, help="保存目录（必填）")
+    ap.add_argument("--naming", choices=["arn", "title"], default="arn",
+                    help="子目录命名：arn=论文编号（默认，稳定唯一）；"
+                         "title=论文标题（可读，重名风险自负）")
     args = ap.parse_args(argv)
     if len(args.arnumber) > MAX_DOWNLOAD:
         ap.error(f"--arnumber 最多 {MAX_DOWNLOAD} 个")
@@ -53,7 +59,15 @@ def figure_name(u):
     return m.group(1) if m else None
 
 
-def download_figures(client, arn, save_dir):
+def dir_name(arn, title, naming):
+    """子目录名。默认用 arnumber（稳定、唯一，便于与详情脚本的结果对齐）；
+    naming="title" 时用清洗并截断的论文标题（可读，但同名论文会互相覆盖）。"""
+    if naming != "title":
+        return arn
+    return sanitize_filename(title)[:70].strip(" ._") or arn
+
+
+def download_figures(client, arn, save_dir, naming="arn"):
     url = f"https://ieeexplore.ieee.org/document/{arn}/"
     client.navigate(url)
     if not client.wait_for("!!document.querySelector('h1')", timeout=get("timeout.detail_load")):
@@ -67,6 +81,9 @@ def download_figures(client, arn, save_dir):
         return {"arnumber": arn, "error": "Invalid arnumber - 404"}
     if not re.search(r"\bSign Out\b|Access provided by", body):
         return {"arnumber": arn, "error": "Not logged in"}
+    # 标题：结果里带上，调用方才知道 <arnumber>/ 目录是哪篇论文；--naming title 时还用它当目录名
+    raw_title = client.evaluate(H1_TEXT_JS)
+    title = re.sub(r"\s+", " ", raw_title).strip() if isinstance(raw_title, str) else ""
 
     if not client.evaluate(f"({FIGURES_TAB_JS})()"):
         return {"arnumber": arn, "error": "No figures"}
@@ -85,7 +102,7 @@ def download_figures(client, arn, save_dir):
     if not urls:
         return {"arnumber": arn, "error": "No figures"}
 
-    out_dir = os.path.join(save_dir, arn)
+    out_dir = os.path.join(save_dir, dir_name(arn, title, naming))
     os.makedirs(out_dir, exist_ok=True)
     n = 0
     failures = []
@@ -101,7 +118,7 @@ def download_figures(client, arn, save_dir):
         except Exception as e:
             failures.append({"name": name, "url": u, "error": str(e)[:200]})
             sys.stderr.write(f"[ieee-figure-download] {arn} 图 {i} 失败: {str(e)[:80]}\n")
-    out = {"arnumber": arn, "count": n, "total": len(urls), "dir": out_dir}
+    out = {"arnumber": arn, "title": title, "count": n, "total": len(urls), "dir": out_dir}
     if failures:
         out["failures"] = failures
     return out
@@ -117,7 +134,7 @@ def main():
             client = create_page(port)
             if i > 0:
                 time.sleep(get("rate.limit")[0])
-            results.append(download_figures(client, arn, args.save_dir))
+            results.append(download_figures(client, arn, args.save_dir, args.naming))
         except Exception as e:
             results.append({"arnumber": arn, "error": str(e)[:200]})
         finally:

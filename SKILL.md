@@ -68,6 +68,10 @@ python scripts/chrome_session.py --stop
 **输出：** `{ count, results, logPath }`，每条 result 含 `keyword, totalResults, pageInfo, perPage, items[{ id, arnumber, title, url, snippet }]`。
 
 - 无结果 → `notice`；404 / 超时 → `error`（加载超时先看是否 `IE_TIMEOUT_PAGE_LOAD` 偏小）
+- **同词异义召回很正常，结果必须人工筛**：`power integrity` 会召回到"电力系统的数据完整性 / 配电网"，
+  `signal integrity` 会召回通信与医学语境，`tutorial` / `review` 还会召回**会议日程与征稿通知**
+  （题名如 "Call for Workshop Papers"）。这类噪音**无法从检索侧根治**，只能按题名 + 摘要人工剔除，
+  别把 `totalResults` 直接当成"相关文献数"。
 
 ### ieee_detail.py
 
@@ -98,8 +102,12 @@ python scripts/chrome_session.py --stop
 |------|:--:|------|------|
 | `--arnumber` | 必填 | — | 文章编号（可重复，1-5 个，顺序执行） |
 | `--save-dir` | 必填 | — | 保存目录（图片存入 `<save-dir>/<arnumber>/`） |
+| `--naming` | 可选 | `arn` | 子目录命名：`arn` = `<save-dir>/<arnumber>/`（稳定唯一，与详情结果对齐）；`title` = `<save-dir>/<清洗后的标题>/`（可读，同名论文会互相覆盖） |
 
-**输出：** `{ count, results, logPath }`，每条含 `count`（成功张数）、`total`（页面收集到的张数）、`dir`；单张图下载失败时另含 `failures[{ name, url, error }]`——**`count < total` 即表示有缺口**。无图 → `"No figures"`。
+**输出：** `{ count, results, logPath }`，每条含 `arnumber`、`title`、`count`（成功张数）、`total`（页面收集到的张数）、`dir`；单张图下载失败时另含 `failures[{ name, url, error }]`——**`count < total` 即表示有缺口**。无图 → `"No figures"`。
+
+- 目录名默认是编号（稳定、唯一，便于和 `ieee_detail.py` 的结果对上）；想"一眼看出是哪篇"就用 `--naming title`。
+  无论用哪种，结果里的 `title` 都能把目录和论文对应起来——**别靠文件名猜内容**。
 
 **用法：**
 

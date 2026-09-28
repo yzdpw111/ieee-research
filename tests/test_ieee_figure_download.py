@@ -104,3 +104,42 @@ class TestFigureFailures:
 
         err = capsys.readouterr().err
         assert "失败" in err
+
+
+class TestDirNaming:
+    """目录命名：默认仍是 arnumber；--naming title 时用清洗后的标题。"""
+
+    def test_arn_is_the_default_dir(self, monkeypatch, tmp_path):
+        _no_sleep(monkeypatch)
+        monkeypatch.setattr(mod, "fetch_binary", lambda c, u: b"img")
+
+        r = mod.download_figures(_FakeClient([FIG1]), "123", str(tmp_path))
+
+        assert (tmp_path / "123" / "fig1.gif").read_bytes() == b"img"
+        assert r["dir"] == str(tmp_path / "123")
+
+    def test_dir_name_helper(self):
+        assert mod.dir_name("123", "Vertical Power Delivery", "arn") == "123"
+        assert mod.dir_name("123", "Vertical Power Delivery", "title") == "Vertical Power Delivery"
+        # 非法文件名字符被替换，两端的分隔符被去掉
+        assert mod.dir_name("123", "A/B: C?", "title") == "A_B_ C"
+        # 标题拿不到时退回 arnumber，不会造出一个空目录名
+        assert mod.dir_name("123", "", "title") == "123"
+
+    def test_naming_title_puts_figures_under_title_dir(self, monkeypatch, tmp_path):
+        _no_sleep(monkeypatch)
+        monkeypatch.setattr(mod, "fetch_binary", lambda c, u: b"img")
+
+        class _Titled(_FakeClient):
+            def evaluate(self, expr, **kw):
+                if "mediastore" in expr:
+                    return list(self._srcs)
+                if "h1" in expr:
+                    return "  Vertical\nPower Delivery "
+                return True
+
+        r = mod.download_figures(_Titled([FIG1]), "123", str(tmp_path), naming="title")
+
+        assert r["title"] == "Vertical Power Delivery"
+        assert (tmp_path / "Vertical Power Delivery" / "fig1.gif").read_bytes() == b"img"
+        assert not (tmp_path / "123").exists()
