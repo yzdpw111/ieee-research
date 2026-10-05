@@ -219,7 +219,8 @@ python scripts\ieee_detail.py --arnumber 8876906
 | `error` 提示 `页面加载超时` | 页面渲染慢 → 确认 `IE_TIMEOUT_PAGE_LOAD` ≥ 20；网络慢可再调大 |
 | 下载报 `stampPDF HTTP 403/302` | 机构**未订阅**该文献（或机构访问失效）→ 重新 `--start` 激活机构访问；仍失败说明未订阅 |
 | 下载报 `下载内容非 PDF：...Content-Type: text/html` | 返回的是登录/权限页 → 同上 |
-| `"Not logged in"` | 机构访问没生效 → `python scripts/chrome_session.py --start` 后确认页面出现 `Access provided by:` |
+| `"Not logged in"` / 页面没有 `Access provided by:` | 机构访问没生效 → `python scripts/chrome_session.py --start` 后确认页面出现 `Access provided by:`。**先检查是否开着梯子/代理** —— 见下条 |
+| 确认已登录但机构访问仍不生效 | **梯子/代理开着会使 IEEE 机构认证异常**（症状与"未订阅"极像，容易误判）→ 关掉梯子/代理后重新 `--start` 再试 |
 | `"Invalid arnumber - 404 page not found"` | 编号不存在 → 用 `ieee_search` 拿正确的 `arnumber` |
 | `Chrome 未找到` | Chrome 没装或装在别处 → 安装 Chrome，或在 `scripts/cdp_base.py` 的 `CHROME_PATHS` 里加路径 |
 | `Chrome 30 秒内未就绪` | 启动超时 → 检查 Chrome 弹窗/杀软拦截，重试 |
@@ -248,14 +249,15 @@ scripts/
   ieee_figure_download.py  图表下载（Figures tab → mediastore 图）
   ieee_parser.py           提取纯函数（URL 构造/正则/清洗）
   cdp_base.py              CDP 客户端 + Chrome 启动 + 人类行为模拟 + tab 生命周期 + 下载能力
-  chrome_session.py        登录会话管理（--start/--status/--stop）
+  chrome_session.py        机构访问会话管理（--start/--status/--stop/--url）
   config.py                集中配置（可用 IE_* 覆盖）
   requirements.txt         依赖清单
 
-tests/                     离线单测（不需要 Chrome / 网络 / 机构权限）
+  tests/
+  test_*.py                离线单测（不需要 Chrome / 网络 / 机构权限）
 ```
 
-跑测试（不需要登录、不需要机构权限）：
+跑测试（离线单测，不需要机构权限/网络）：
 
 ```powershell
 pip install pytest
