@@ -1,6 +1,6 @@
 ---
 name: ieee-research
-description: IEEE Xplore 学术论文检索 — 搜索、详情、PDF/图片下载，CDP Chrome 自动化
+description: 从 IEEE Xplore 抓取学术论文数据。当用户需要检索 IEEE 论文（可按内容类型/年份筛选），或抓取论文详情（摘要、参考文献、关键词、引用格式），或下载论文 PDF、图表图片时使用。基于 CDP 裸 Chrome 自动化，需 Google Chrome；检索无需登录，下载全文需机构访问权限——在校园网内直接生效，校外网络需先通过 CARSI 登录学校账号。
 ---
 
 # IEEE Xplore Research
@@ -223,3 +223,53 @@ tests/                     离线单测（不需要 Chrome / 网络 / 机构权�
 pip install pytest
 python -m pytest tests -q
 ```
+
+## 做论文调研时的用法（与 wanfang-research 配合）
+
+> 这一节是写给"新会话里的 agent"的：读到这里，就够照着做完一个完整的论文调研任务。
+> 本 skill 只负责检索与下载。
+
+### 环境自检（新电脑 / 新会话第一步）
+
+1. `pip install -r scripts/requirements.txt`
+2. `python scripts/chrome_session.py --status` → 应显示 `CDP 在线: ... (port 9222)`
+3. **跑一次最轻的搜索**验证整条链路通（不需要登录）：
+   `python scripts/ieee_search.py --q "power integrity" --rows 3`
+4. 下载 / 详情需要机构访问：`python scripts/chrome_session.py --start`，然后确认机构访问已生效。
+   判定依据（与脚本实现一致）：页面出现 **`Sign Out`** 或 **`Access provided by: <机构名>`**。
+   详情结果里的 `hasInstitutionalAccess` 字段用同一判据（页面级检测，与 PDF 接口权限
+   **不一定一致**，以下载实际返回为准）。**`--status` 只证明 CDP 在线，不显示机构访问状态。**
+
+### 目录组织约定（调研任务请照这个建）
+
+```
+<工作目录>/
+├── README.md          # 目标、进度、产出清单
+├── 01_摘要库/          # 原始 JSON（skill 落盘）+ 人读版汇总 .md
+├── 02_精读论文/        # PDF + 精读笔记 .md + figures/（图表）
+├── 03_引用文献/        # 下载到的引用 PDF + 引用清单.md（含失败原因）
+├── 04_综述/            # 综述提纲 + 最终 docx
+└── logs/              # 落盘日志（建议把 IE_LOGS_DIR 固定指到这里）
+```
+
+把 `IE_LOGS_DIR` 指到 `logs/`，避免日志散落在各处的 `logs/` 子目录里。
+
+### 四步工作流
+
+1. **搜索 + 抓摘要**：多个关键词并行搜（`--parallel 2`，一次 1-8 个关键词），
+   拿到 `arnumber` / `url` 后**批量**抓详情（一次 1-8 个，最划算）。总量按"关键词数 × rows"控制。
+2. **选精读**：优先挑 review / tutorial / 入门介绍性质的；下载 PDF 与图表
+   （图表用专门的 download 脚本，图片存到该论文同名目录下）。
+3. **解析引用**：详情输出里的 `references[]` 是**纯文本**（IEEE 形如 `[1] A. Author, "Title," …`；
+   万方是 GB/T 7714 文本）。用**题名**去搜索定位，再下载；下不到的把原因记进清单。
+4. **写综述**：把前面的摘要与精读笔记汇总成中文综述，产出 .docx。
+
+### 注意事项（这些会真实咬人）
+
+- **下载是顺序执行、每条间隔 8-18 s**（防限流）。几百条引用要跑几小时 → **必须分批 + 记录进度**，
+  按"精读论文自己的 PDF → 引用文献"的优先级来，别一次性跑到底。
+- **引用文献大量下不到是常态**（书 / 标准 / 其它出版社 / 机构未订阅）。
+  一份**写清失败原因的清单**比"下到了几篇"更有价值。
+- 详情页慢（20-30 s/次），所以**一次传满 8 个编号**；`--parallel` 别调太高（提升风控风险）。
+- tab 总数到上限时**只告警不自动关**（四个 skill 共用一个 Chrome，别乱关别人的 tab）。
+- 所有命令都**在 skill 仓库根目录**执行（脚本路径写成 `scripts/xxx.py`）。
