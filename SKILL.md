@@ -21,6 +21,8 @@ pip install -r scripts/requirements.txt
 python scripts/ieee_search.py --q "deep learning" --rows 5 --parallel 1
 
 # 3) 要下载 PDF / 图表时，先确认机构访问已生效
+#    校园网内：先关掉梯子/代理（它会改掉出口 IP，导致机构识别失败）
+#    校外：用 CARSI 登录学校账号（走账号认证，不依赖出口 IP，梯子不影响）
 python scripts/chrome_session.py --start
 #    → 用机构 IP 或 CARSI 登录，打开任意 IEEE 页面，顶部出现
 #      "Access provided by: <你的机构名>" 即已激活
@@ -219,8 +221,8 @@ python scripts\ieee_detail.py --arnumber 8876906
 | `error` 提示 `页面加载超时` | 页面渲染慢 → 确认 `IE_TIMEOUT_PAGE_LOAD` ≥ 20；网络慢可再调大 |
 | 下载报 `stampPDF HTTP 403/302` | 机构**未订阅**该文献（或机构访问失效）→ 重新 `--start` 激活机构访问；仍失败说明未订阅 |
 | 下载报 `下载内容非 PDF：...Content-Type: text/html` | 返回的是登录/权限页 → 同上 |
-| `"Not logged in"` / 页面没有 `Access provided by:` | 机构访问没生效 → `python scripts/chrome_session.py --start` 后确认页面出现 `Access provided by:`。**先检查是否开着梯子/代理** —— 见下条 |
-| 确认已登录但机构访问仍不生效 | **梯子/代理开着会使 IEEE 机构认证异常**（症状与"未订阅"极像，容易误判）→ 关掉梯子/代理后重新 `--start` 再试 |
+| `"Not logged in"` / 页面没有 `Access provided by:` | 机构访问没生效 → `python scripts/chrome_session.py --start` 后确认页面出现 `Access provided by:`。**校园网内还要检查是否开着梯子/代理** —— 见下条 |
+| 校园网内已连上但仍不生效 | **梯子/代理会改掉出口 IP，使机构识别失败**（症状与"未订阅"极像，容易误判）→ 关掉梯子/代理后重新 `--start` 再试。**校外走 CARSI 账号认证时不适用**：那条路径不依赖出口 IP |
 | `"Invalid arnumber - 404 page not found"` | 编号不存在 → 用 `ieee_search` 拿正确的 `arnumber` |
 | `Chrome 未找到` | Chrome 没装或装在别处 → 安装 Chrome，或在 `scripts/cdp_base.py` 的 `CHROME_PATHS` 里加路径 |
 | `Chrome 30 秒内未就绪` | 启动超时 → 检查 Chrome 弹窗/杀软拦截，重试 |
